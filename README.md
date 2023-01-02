@@ -12,7 +12,7 @@
 5. Restart Docker desktop
 
 ## To run:
-Make sure that if you open the dockerfile, that you ensure it is saved using LF and not CRLF. For VSCode, this can be seen and changed through the status bar
+Make sure that if you open the dockerfile, you check that it has been saved using LF (Line Feed) and not CRLF (Carriage Return Line Feed). For VSCode, this can be seen and changed through the status bar
 
 ```prompt
 git clone https://github.com/nslebruh/wasm-docker-test.git
