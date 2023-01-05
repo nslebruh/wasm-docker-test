@@ -1,7 +1,12 @@
+version: '2.4'
 services:
   server:
     image: nslebruh/wasm-docker-test
     platform: wasi/wasm32
     runtime: io.containerd.wasmedge.v1
+    volumes:
+      - type: bind
+        source: ./files
+        target: /files
     ports:
       - 8080:8080

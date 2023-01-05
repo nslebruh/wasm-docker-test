@@ -24,7 +24,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/git/db \
 RUN /root/.wasmedge/bin/wasmedgec target/wasm32-wasi/release/wasm-docker-test.wasm wasm-docker-test.wasm
 
 FROM scratch
-COPY --from=build /src/wasm-docker-test.wasm /wasm-docker-test.wasm
+COPY --from=build /src/wasm-docker-test.wasm  ./
 ENTRYPOINT [ "wasm-docker-test.wasm" ]
 
 
