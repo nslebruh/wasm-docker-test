@@ -4,21 +4,19 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="files/"/>
-    <script type="importmap">
-        {
-            "imports": {
-                "main": "./index.js"
-            }
-        }
-    </script>
+    <base href="/files/wasm-webgl/">
+    <link rel="stylesheet" href="./styles.css">
     <title>Document</title>
 </head>
 <body>
-    <h1>Title</h1>
+    <canvas id="canvas" height="150" width="150"></canvas>
     <script type="module">
-        import { test } from "main"
-        test("bruh2")
+        import init from "./pkg/wasm_webgl.js"
+
+        async function run() {
+            await init()
+        }
+        run()
     </script>
 </body>
 </html>

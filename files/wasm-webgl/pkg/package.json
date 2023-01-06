@@ -1,0 +1,12 @@
+{
+  "name": "wasm-webgl",
+  "version": "0.1.0",
+  "files": [
+    "wasm_webgl_bg.wasm",
+    "wasm_webgl.js",
+    "wasm_webgl.d.ts"
+  ],
+  "module": "wasm_webgl.js",
+  "types": "wasm_webgl.d.ts",
+  "sideEffects": false
+}
