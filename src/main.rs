@@ -2,7 +2,7 @@
 extern crate lazy_static;
 
 use std::net::SocketAddr;
-use std::fs::{read_to_string, read};
+use std::fs::read;
 use regex::Regex;
 use std::ffi::OsStr;
 use std::path::Path;
@@ -12,12 +12,6 @@ use hyper::service::service_fn;
 use hyper::{Body, Method, Request, Response, StatusCode};
 use tokio::net::TcpListener;
 
-
-enum FileTypes {
-    ByteVector(Vec<u8>),
-    String(String)
-    
-}
 
 lazy_static! {
     static ref IS_FILE_REGEX: Regex = Regex::new(r"(\S+)\.(\S+)").unwrap();
@@ -35,9 +29,9 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, path) if IS_FILE_REGEX.is_match(path) => {
             println!("path: {}", path);
-            let file: FileTypes;
+            let file: Option<Vec<u8>>;
             let mut status = StatusCode::OK;
-            let mut content_header = "text/html";
+            let mut content_header = "text/plain";
             let file_ext;
             
             match Path::new(path).try_exists() {
@@ -45,21 +39,18 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
                     match y {
                         true => {
                             file_ext = get_extension_from_filename(path).unwrap();
-                            file = match file_ext {
-                                "wasm" => FileTypes::ByteVector(read(path).unwrap()),
-                                _ => FileTypes::String(read_to_string(path).unwrap())
-                            };
+                            file = Some(read(path).unwrap());
                             content_header = get_content_header(file_ext);
                         },
                         false => {
-                            file = FileTypes::String(String::from("File not found"));
                             status = StatusCode::NOT_FOUND;
+                            file = None;
                         }
                     };
                 },
                 Err(_) => {
                     status = StatusCode::INTERNAL_SERVER_ERROR;
-                    file = FileTypes::String(String::from("Internal server error"));
+                    file = None;
                 }
             }
 
@@ -80,13 +71,13 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
                     _ => "application/octet-stream"
                 }
             }
-
+            
             Ok(Response::builder()
                 .header("Content-type", content_header)
                 .status(status)
                 .body(match file {
-                    FileTypes::ByteVector(x) => Body::from(x),
-                    FileTypes::String(x) => Body::from(x)
+                    Some(x) => Body::from(x),
+                    None => Body::empty()
                 }).unwrap()
             )
         },
@@ -98,18 +89,11 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
         (&Method::GET, "/index") => Ok(
             Response::new(
                 Body::from(
-                    read_to_string("/files/hello_world/index.html")
+                    read("/files/hello_world/index.html")
                     .expect("Should be able to read index.html")
                 )
             )
         ),
-        (&Method::GET, "/js") => {
-            Ok(Response::builder()
-                .header("Content-type", "application/javascript")
-                .body(Body::from(read_to_string("/files/index.js").expect("Should be able to read index.js")))
-                .expect("Should be able to create JS response")
-            )
-        },
         (&Method::POST, "/echo") => Ok(Response::new(req.into_body())),
         _ => {
             let mut not_found = Response::default();
