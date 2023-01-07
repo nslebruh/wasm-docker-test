@@ -25,20 +25,20 @@ fn get_extension_from_filename(filename: &str) -> Option<&str> {
 }
 
 
-async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
-    match (req.method(), req.uri().path()) {
-        (&Method::GET, path) if IS_FILE_REGEX.is_match(path) => {
+async fn router(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+    let path = req.uri().path();
+    if req.method() == Method::GET {
+        if IS_FILE_REGEX.is_match(path) {
             println!("path: {}", path);
             let file: Option<Vec<u8>>;
             let mut status = StatusCode::OK;
             let mut content_header = "text/plain";
-            let file_ext;
             
             match Path::new(path).try_exists() {
                 Ok(y) => {
                     match y {
                         true => {
-                            file_ext = get_extension_from_filename(path).unwrap();
+                            let file_ext = get_extension_from_filename(path).unwrap();
                             file = Some(read(path).unwrap());
                             content_header = get_content_header(file_ext);
                         },
@@ -66,13 +66,13 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
                     "woff" => "font/woff",
                     "woff2" => "font/woff2",
                     "sfnt" => "font/sfnt",
-                    "rs" => "test/plain",
-                    "toml" => "test/plain",
+                    "rs" => "text/plain",
+                    "toml" => "text/plain",
                     _ => "application/octet-stream"
                 }
             }
             
-            Ok(Response::builder()
+            return Ok(Response::builder()
                 .header("Content-type", content_header)
                 .status(status)
                 .body(match file {
@@ -80,13 +80,15 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
                     None => Body::empty()
                 }).unwrap()
             )
-        },
-        (&Method::GET, "/") => Ok(
+        };
+    }
+    match path {
+        "/" => Ok(
             Response::new(
                 Body::from("Hello world from Rust running with Wasm! Send POST data to /echo to have it echoed back to you")
             )
         ),
-        (&Method::GET, "/index") => Ok(
+        "/index" => Ok(
             Response::new(
                 Body::from(
                     read("/files/hello_world/index.html")
@@ -94,12 +96,14 @@ async fn echo(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
                 )
             )
         ),
-        (&Method::POST, "/echo") => Ok(Response::new(req.into_body())),
-        _ => {
-            let mut not_found = Response::default();
-            *not_found.status_mut() = StatusCode::NOT_FOUND;
-            Ok(not_found)
-        }
+        "/echo" => Ok(Response::new(req.into_body())),
+        _ => Ok(
+            Response::builder()
+                .status(404)
+                .body(
+                    Body::from("Path not found")
+                ).unwrap()
+            )
     }
 }
 
@@ -109,12 +113,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
 
     let listener = TcpListener::bind(addr).await?;
-    println!("Listening on port https://{}", addr);
+    println!("Listening on port https://localhost:{}", addr);
     loop {
         let (stream, _) = listener.accept().await?;
         
         tokio::task::spawn(async move {
-            if let Err(err) = Http::new().serve_connection(stream, service_fn(echo)).await {
+            if let Err(err) = Http::new().serve_connection(stream, service_fn(router)).await {
                 println!("Error serving connection: {:?}", err);
             }
         });
